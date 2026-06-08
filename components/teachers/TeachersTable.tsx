@@ -299,9 +299,9 @@ export default function TeachersTable({ teachers, canView }: Props) {
         </div>
       )}
 
-      {/* ── Table view ──────────────────────── */}
+      {/* ── Table view (Desktop and Tablet only) ──────────────────────── */}
       {filtered.length > 0 && viewMode === 'table' && (
-        <div className="table-wrapper">
+        <div className="hidden md:block table-wrapper">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -378,9 +378,9 @@ export default function TeachersTable({ teachers, canView }: Props) {
         </div>
       )}
 
-      {/* ── Grid view ───────────────────────── */}
-      {filtered.length > 0 && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* ── Grid/Card view (Always visible on mobile, and on desktop/tablet if viewMode is 'grid') ── */}
+      {filtered.length > 0 && (
+        <div className={`${viewMode === 'grid' ? 'grid' : 'grid md:hidden'} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4`}>
           {paged.map(t => {
             const ac = avatarColor(t.full_name)
             const sc = STATUS_CONFIG[t.status]

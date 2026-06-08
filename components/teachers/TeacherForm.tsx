@@ -200,8 +200,8 @@ export default function TeacherForm({ teacher, mode }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-0">
-      {/* ── Step indicator ─────────────────────── */}
-      <div className="card p-4 mb-6">
+      {/* ── Step indicator (Desktop version) ─────────────────────── */}
+      <div className="hidden md:block card p-4 mb-6">
         <div className="flex items-center gap-1 overflow-x-auto pb-1">
           {STEPS.map((s, i) => (
             <div key={s.key} className="flex items-center min-w-0">
@@ -228,6 +228,24 @@ export default function TeacherForm({ teacher, mode }: Props) {
               )}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── Step indicator (Mobile version) ─────────────────────── */}
+      <div className="block md:hidden card p-4 mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Step {step + 1} of {STEPS.length}
+          </p>
+          <p className="text-sm font-bold text-slate-800">
+            {STEPS[step].label}
+          </p>
+        </div>
+        <div className="progress-bar">
+          <div
+            className="progress-fill bg-emerald-600"
+            style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+          />
         </div>
       </div>
 

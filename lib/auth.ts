@@ -14,7 +14,9 @@ export const getUser = cache(async (): Promise<AppUser | null> => {
     .eq('id', user.id)
     .single()
 
-  if (!profile) return null
+  if (!profile) {
+    redirect('/api/auth/signout?error=no_profile')
+  }
   return profile as AppUser
 })
 
