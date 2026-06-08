@@ -34,13 +34,14 @@ export default function TeacherProfileTabs({ teacher: t, history, timetable, can
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit mb-6">
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-fit mb-6 overflow-x-auto scrollbar-none flex-nowrap whitespace-nowrap">
         {tabs.map(({ key, label, icon }) => (
           <button
             key={key}
+            type="button"
             onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
-                        transition-all duration-150 ${
+                        transition-all duration-150 flex-shrink-0 ${
               tab === key
                 ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
@@ -149,7 +150,7 @@ export default function TeacherProfileTabs({ teacher: t, history, timetable, can
               <h2 className="form-section-title">
                 <Briefcase className="w-4 h-4 text-slate-400" /> Employment Details
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { label: 'Date Joined', value: new Date(t.date_joined).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: '2-digit' }) },
                   { label: 'Designation', value: t.designation },

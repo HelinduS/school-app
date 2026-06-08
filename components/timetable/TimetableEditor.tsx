@@ -19,13 +19,11 @@ const DAY_LBL = { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Th
 const DAY_FULL = { monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday', thursday: 'Thursday', friday: 'Friday' }
 const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8]
 
-// Period times (example — 45 min periods, school starts 7:30)
 const PERIOD_TIMES: Record<number, string> = {
   1: '7:30',  2: '8:15',  3: '9:00', 4: '9:45',
   5: '10:40', 6: '11:25', 7: '12:10', 8: '13:00',
 }
 
-// Cycle colors for subjects
 const SUBJECT_COLORS = [
   { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', sub: 'text-emerald-600', dot: 'bg-emerald-400' },
   { bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-800',    sub: 'text-blue-600',    dot: 'bg-blue-400'    },
@@ -48,6 +46,7 @@ export default function TimetableEditor({ teacherId, initialSlots, subjects }: P
   const [loading, setLoading] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting,     setDeleting]     = useState(false)
+  const [activeDay,    setActiveDay]    = useState<typeof DAYS[number]>('monday')
 
   // Build subject → color index map for consistent colors
   const subjectColorMap = subjects.reduce<Record<string, number>>((acc, s, i) => {
@@ -130,9 +129,9 @@ export default function TimetableEditor({ teacherId, initialSlots, subjects }: P
   return (
     <>
       {/* Summary bar */}
-      <div className="card p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="card p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <CalendarDays className="w-5 h-5 text-emerald-500" />
+          <CalendarDays className="w-5 h-5 text-emerald-500 flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-slate-900">
               {filledCount} <span className="text-slate-400 font-normal">of</span> {totalSlots} periods assigned
@@ -140,7 +139,7 @@ export default function TimetableEditor({ teacherId, initialSlots, subjects }: P
             <p className="text-xs text-slate-400">Click any cell to assign or edit a period</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {subjects.slice(0, 5).map((s, i) => {
             const c = SUBJECT_COLORS[i % SUBJECT_COLORS.length]
             return (
@@ -151,13 +150,13 @@ export default function TimetableEditor({ teacherId, initialSlots, subjects }: P
             )
           })}
           {subjects.length > 5 && (
-            <span className="text-xs text-slate-400">+{subjects.length - 5} more</span>
+            <span className="text-xs text-slate-400 font-medium">+{subjects.length - 5} more</span>
           )}
         </div>
       </div>
 
-      {/* Timetable grid */}
-      <div className="card overflow-hidden mb-6">
+      {/* ── 1. Desktop timetable grid (md and up) ────────────────── */}
+      <div className="hidden md:block card overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px]">
             <thead>
@@ -200,8 +199,9 @@ export default function TimetableEditor({ teacherId, initialSlots, subjects }: P
                             {slot.room && (
                               <p className={`text-[10px] ${c.sub} truncate`}>Rm {slot.room}</p>
                             )}
-                            {/* Delete button */}
+                            {/* Delete button (desktop hover reveal) */}
                             <button
+                              type="button"
                               onClick={e => { e.stopPropagation(); setDeleteTarget(slot.id) }}
                               className="absolute top-1 right-1 p-0.5 rounded-full bg-white/80 shadow-sm
                                          opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
@@ -211,6 +211,7 @@ export default function TimetableEditor({ teacherId, initialSlots, subjects }: P
                           </div>
                         ) : (
                           <button
+                            type="button"
                             onClick={() => startEdit(day, period)}
                             className="w-full min-h-[60px] rounded-xl border-2 border-dashed border-slate-200
                                        text-slate-300 hover:border-emerald-300 hover:text-emerald-400
@@ -226,6 +227,84 @@ export default function TimetableEditor({ teacherId, initialSlots, subjects }: P
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ── 2. Mobile timetable editor (below md) ────────────────── */}
+      <div className="block md:hidden space-y-4 mb-6">
+        {/* Day select tabs */}
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-none flex-nowrap whitespace-nowrap">
+          {DAYS.map(d => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setActiveDay(d)}
+              className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                activeDay === d
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {DAY_LBL[d]}
+            </button>
+          ))}
+        </div>
+
+        {/* Vertical period slots list */}
+        <div className="space-y-2.5">
+          {PERIODS.map(period => {
+            const slot = getSlot(activeDay, period)
+            const colorIdx = slot ? (subjectColorMap[slot.subject_id] ?? 0) : 0
+            const c = SUBJECT_COLORS[colorIdx]
+
+            return (
+              <div
+                key={period}
+                onClick={() => startEdit(activeDay, period)}
+                className={`flex items-center gap-3 p-3 bg-white rounded-2xl border cursor-pointer transition-all hover:border-slate-350 ${
+                  slot ? `${c.border} shadow-sm shadow-slate-100/55` : 'border-slate-200 border-dashed bg-slate-50/20'
+                }`}
+              >
+                {/* Period identifier */}
+                <div className="w-12 text-center flex-shrink-0 border-r border-slate-100 pr-3">
+                  <p className="text-xs font-bold text-slate-700">P {period}</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">{PERIOD_TIMES[period]}</p>
+                </div>
+
+                {/* Slot info or Assign placeholder */}
+                <div className="min-w-0 flex-1 relative pr-8">
+                  {slot ? (
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+                        <p className="text-xs font-semibold text-slate-800 truncate">
+                          {slot.subject?.name ?? 'Subject'}
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 pl-3">
+                        Grade {slot.grade}–{slot.class_name} · Room {slot.room || '—'}
+                      </p>
+                      
+                      {/* Delete slot button (permanently visible on mobile/touch interfaces) */}
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setDeleteTarget(slot.id) }}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 transition-colors"
+                        title="Clear Time Slot"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-slate-400 hover:text-emerald-500 transition-colors">
+                      <Plus className="w-3.5 h-3.5" />
+                      <p className="text-xs italic">Assign time slot</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 

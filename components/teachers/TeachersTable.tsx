@@ -5,7 +5,7 @@ import { Teacher } from '@/types'
 import Link from 'next/link'
 import {
   Search, ChevronRight, ChevronUp, ChevronDown,
-  LayoutGrid, List, Download, Users, ArrowUpDown
+  LayoutGrid, List, Download, Users, ArrowUpDown, Filter
 } from 'lucide-react'
 
 interface Props {
@@ -73,6 +73,7 @@ export default function TeachersTable({ teachers, canView }: Props) {
   const [sortAsc,      setSortAsc]      = useState(true)
   const [viewMode,     setViewMode]     = useState<ViewMode>('table')
   const [page,         setPage]         = useState(1)
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
 
   const toggleSort = useCallback((key: SortKey) => {
     if (sortKey === key) setSortAsc(v => !v)
@@ -122,45 +123,66 @@ export default function TeachersTable({ teachers, canView }: Props) {
       {/* ── Filters bar ─────────────────────── */}
       <div className="card p-4">
         <div className="flex flex-col md:flex-row gap-3">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => handleSearch(e.target.value)}
-              placeholder="Search by name, NIC, designation…"
-              className="input pl-10"
-            />
+          {/* Search Bar & Mobile filter toggle */}
+          <div className="flex gap-2 w-full md:flex-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => handleSearch(e.target.value)}
+                placeholder="Search by name, NIC, designation…"
+                className="input pl-10"
+              />
+            </div>
+
+            {/* Mobile Filter Toggle */}
+            <button
+              type="button"
+              onClick={() => setFiltersExpanded(v => !v)}
+              className={`md:hidden btn-secondary btn-sm px-3.5 flex items-center gap-1.5 rounded-xl border ${
+                (statusFilter !== 'all' || typeFilter !== 'all')
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-slate-200 text-slate-700 bg-white'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              <span className="text-xs">Filters</span>
+              {(statusFilter !== 'all' || typeFilter !== 'all') && (
+                <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[9px] font-bold flex items-center justify-center">
+                  {(statusFilter !== 'all' ? 1 : 0) + (typeFilter !== 'all' ? 1 : 0)}
+                </span>
+              )}
+            </button>
           </div>
 
-          {/* Filters */}
-          <select
-            value={statusFilter}
-            onChange={e => handleStatus(e.target.value)}
-            className="input md:w-40"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="on_leave">On Leave</option>
-            <option value="transferred">Transferred</option>
-            <option value="retired">Retired</option>
-          </select>
+          {/* Desktop Filters (Hidden on Mobile) */}
+          <div className="hidden md:flex flex-row gap-3 flex-shrink-0">
+            <select
+              value={statusFilter}
+              onChange={e => handleStatus(e.target.value)}
+              className="input md:w-40"
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="on_leave">On Leave</option>
+              <option value="transferred">Transferred</option>
+              <option value="retired">Retired</option>
+            </select>
 
-          <select
-            value={typeFilter}
-            onChange={e => handleType(e.target.value)}
-            className="input md:w-40"
-          >
-            <option value="all">All types</option>
-            <option value="permanent">Permanent</option>
-            <option value="contract">Contract</option>
-            <option value="temporary">Temporary</option>
-          </select>
+            <select
+              value={typeFilter}
+              onChange={e => handleType(e.target.value)}
+              className="input md:w-40"
+            >
+              <option value="all">All types</option>
+              <option value="permanent">Permanent</option>
+              <option value="contract">Contract</option>
+              <option value="temporary">Temporary</option>
+            </select>
 
-          {/* View toggle & Export (aligned side-by-side on mobile) */}
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
+            {/* View toggle & Export (desktop) */}
+            <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white">
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
@@ -182,13 +204,77 @@ export default function TeachersTable({ teachers, canView }: Props) {
             <button
               type="button"
               onClick={() => exportCsv(filtered)}
-              className="btn-secondary flex-1 md:flex-initial justify-center"
+              className="btn-secondary"
               title="Export CSV"
             >
               <Download className="w-4 h-4" />
               <span>Export</span>
             </button>
           </div>
+
+          {/* Mobile Filters Accordion (Expanded on Mobile) */}
+          {filtersExpanded && (
+            <div className="flex flex-col md:hidden gap-3 pt-3.5 border-t border-slate-100 animate-fade-in-up">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={e => handleStatus(e.target.value)}
+                    className="input py-2 px-3 text-xs"
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="active">Active</option>
+                    <option value="on_leave">On Leave</option>
+                    <option value="transferred">Transferred</option>
+                    <option value="retired">Retired</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Type</label>
+                  <select
+                    value={typeFilter}
+                    onChange={e => handleType(e.target.value)}
+                    className="input py-2 px-3 text-xs"
+                  >
+                    <option value="all">All types</option>
+                    <option value="permanent">Permanent</option>
+                    <option value="contract">Contract</option>
+                    <option value="temporary">Temporary</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mt-1 pt-2 border-t border-slate-100">
+                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('table')}
+                    className={`p-2 transition-colors ${viewMode === 'table' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <List className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => exportCsv(filtered)}
+                  className="btn-secondary flex-1 justify-center py-2 text-xs flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Result count */}
@@ -326,12 +412,15 @@ export default function TeachersTable({ teachers, canView }: Props) {
 
       {/* ── Pagination ──────────────────────── */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">
-            Page {page} of {totalPages}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          <p className="text-sm text-slate-500 hidden sm:block">
+            Showing page {page} of {totalPages}
           </p>
-          <div className="flex items-center gap-1">
+          
+          {/* Desktop pagination (sm and up) */}
+          <div className="hidden sm:flex items-center gap-1">
             <button
+              type="button"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
               className="btn-secondary btn-sm disabled:opacity-40"
@@ -344,6 +433,7 @@ export default function TeachersTable({ teachers, canView }: Props) {
               return (
                 <button
                   key={pg}
+                  type="button"
                   onClick={() => setPage(pg)}
                   className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
                     pg === page
@@ -356,9 +446,33 @@ export default function TeachersTable({ teachers, canView }: Props) {
               )
             })}
             <button
+              type="button"
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               className="btn-secondary btn-sm disabled:opacity-40"
+            >
+              Next →
+            </button>
+          </div>
+
+          {/* Mobile pagination (compact, below sm) */}
+          <div className="flex sm:hidden items-center justify-between w-full">
+            <button
+              type="button"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="btn-secondary btn-sm px-4 py-2 disabled:opacity-40"
+            >
+              ← Prev
+            </button>
+            <span className="text-xs font-semibold text-slate-600">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="btn-secondary btn-sm px-4 py-2 disabled:opacity-40"
             >
               Next →
             </button>
