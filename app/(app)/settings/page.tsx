@@ -73,7 +73,7 @@ export default async function SettingsPage() {
                     <p className="text-sm font-medium text-slate-900">{u.full_name}</p>
                     <p className="text-xs text-slate-400">{u.email}</p>
                   </div>
-                  <span className={`badge text-xs ${roleBadge[u.role] || ''}`}>
+                  <span className={`badge text-xs flex-shrink-0 ${roleBadge[u.role] || ''}`}>
                     {roleLabels[u.role] || u.role}
                   </span>
                 </div>

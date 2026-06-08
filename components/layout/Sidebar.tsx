@@ -183,7 +183,7 @@ export default function Sidebar({ user, onClose }: SidebarProps) {
           </div>
           <button
             onClick={handleSignOut}
-            className="text-slate-500 hover:text-red-400 transition-colors p-1 opacity-0 group-hover:opacity-100"
+            className="text-slate-500 hover:text-red-400 transition-colors p-1 opacity-80 md:opacity-0 md:group-hover:opacity-100"
             title="Sign out"
           >
             <LogOut className="w-3.5 h-3.5" />

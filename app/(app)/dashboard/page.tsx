@@ -275,7 +275,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-8">
+          <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
             {/* Donut chart */}
             <div className="relative flex-shrink-0">
               <DonutChart segments={donutSegments} />
@@ -286,7 +286,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Legend + bars */}
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 w-full space-y-4">
               {breakdown.map(({ label, value, total, color }) => (
                 <div key={label}>
                   <div className="flex items-center justify-between mb-1.5">

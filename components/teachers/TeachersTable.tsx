@@ -158,33 +158,37 @@ export default function TeachersTable({ teachers, canView }: Props) {
             <option value="temporary">Temporary</option>
           </select>
 
-          {/* View toggle */}
-          <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white">
+          {/* View toggle & Export (aligned side-by-side on mobile) */}
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`p-2.5 transition-colors ${viewMode === 'table' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                title="Table view"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                title="Grid view"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+
             <button
-              onClick={() => setViewMode('table')}
-              className={`p-2.5 transition-colors ${viewMode === 'table' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Table view"
+              type="button"
+              onClick={() => exportCsv(filtered)}
+              className="btn-secondary flex-1 md:flex-initial justify-center"
+              title="Export CSV"
             >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Grid view"
-            >
-              <LayoutGrid className="w-4 h-4" />
+              <Download className="w-4 h-4" />
+              <span>Export</span>
             </button>
           </div>
-
-          {/* Export */}
-          <button
-            onClick={() => exportCsv(filtered)}
-            className="btn-secondary"
-            title="Export CSV"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
-          </button>
         </div>
 
         {/* Result count */}
