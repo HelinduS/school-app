@@ -58,7 +58,7 @@ export default async function TeacherTimetablePage({ params }: { params: { id: s
           subjects={subjects || []}
         />
       ) : (
-        <TimetableGrid slots={(slots || []) as TimetableSlot[]} />
+        <TimetableGrid slots={(slots || []) as TimetableSlot[]} teacherName={t.name_with_initials} />
       )}
     </div>
   )

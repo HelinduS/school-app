@@ -226,7 +226,7 @@ export default function TeacherProfileTabs({ teacher: t, history, timetable, can
             )}
           </div>
           {timetable.length > 0 ? (
-            <TimetableGrid slots={timetable} />
+            <TimetableGrid slots={timetable} teacherName={t.name_with_initials} />
           ) : (
             <div className="card empty-state">
               <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
