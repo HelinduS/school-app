@@ -21,6 +21,7 @@ export interface Teacher {
 
   // Employment
   designation: string
+  grade: string | null
   employment_type: EmploymentType
   status: TeacherStatus
   date_joined: string

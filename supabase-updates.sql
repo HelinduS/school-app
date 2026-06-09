@@ -169,3 +169,9 @@ insert into subjects (name, department) values
   ('Business Studies',  'Commerce'),
   ('Health Science',    'Science')
 on conflict (name) do nothing;
+
+
+-- ============================================================
+-- SECTION 8: ADD GRADE COLUMN TO TEACHERS TABLE
+-- ============================================================
+alter table teachers add column if not exists grade text;

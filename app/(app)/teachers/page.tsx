@@ -11,10 +11,15 @@ export default async function TeachersPage() {
   const user     = await requireAuth()
   const supabase = createServerSupabaseClient()
 
-  const { data: teachers } = await supabase
-    .from('teachers')
-    .select('*')
-    .order('full_name', { ascending: true })
+  const [{ data: teachers }, { data: subjects }] = await Promise.all([
+    supabase
+      .from('teachers')
+      .select('*')
+      .order('full_name', { ascending: true }),
+    supabase
+      .from('subjects')
+      .select('*')
+  ])
 
   const list = (teachers || []) as Teacher[]
 
@@ -38,7 +43,7 @@ export default async function TeachersPage() {
         )}
       </div>
 
-      <TeachersTable teachers={list} canView={true} />
+      <TeachersTable teachers={list} subjects={subjects || []} canView={true} />
     </div>
   )
 }

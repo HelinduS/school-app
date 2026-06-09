@@ -46,6 +46,38 @@ const typeConfig = {
   temporary: 'badge-temporary',
 }
 
+function calculateAgeDetails(dobStr: string, targetDate: Date): { years: number; months: number; days: number } {
+  if (!dobStr) return { years: 0, months: 0, days: 0 }
+  const dob = new Date(dobStr)
+  if (isNaN(dob.getTime())) return { years: 0, months: 0, days: 0 }
+
+  let years = targetDate.getFullYear() - dob.getFullYear()
+  let months = targetDate.getMonth() - dob.getMonth()
+  let days = targetDate.getDate() - dob.getDate()
+
+  if (days < 0) {
+    const prevMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 0)
+    days += prevMonth.getDate()
+    months -= 1
+  }
+
+  if (months < 0) {
+    months += 12
+    years -= 1
+  }
+
+  return { years, months, days }
+}
+
+function getRetirementDate(dobStr: string): string {
+  if (!dobStr) return '—'
+  const dob = new Date(dobStr)
+  if (isNaN(dob.getTime())) return '—'
+  const retirement = new Date(dob)
+  retirement.setFullYear(dob.getFullYear() + 60)
+  return retirement.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: '2-digit' })
+}
+
 export default async function TeacherProfilePage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient()
 
@@ -66,8 +98,16 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
   const tc        = typeConfig[t.employment_type] ?? 'badge-temporary'
   const av        = avatarGradient(t.full_name)
 
-  const age = t.date_of_birth
-    ? Math.floor((Date.now() - new Date(t.date_of_birth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
+  const ageDetails = t.date_of_birth
+    ? calculateAgeDetails(t.date_of_birth, new Date())
+    : null
+
+  const ageStr = ageDetails
+    ? `${ageDetails.years}y ${ageDetails.months}m ${ageDetails.days}d`
+    : null
+
+  const retirementStr = t.date_of_birth
+    ? getRetirementDate(t.date_of_birth)
     : null
 
   const yearsOfService = t.date_joined
@@ -133,10 +173,16 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
                 <Award className="w-4 h-4 text-emerald-500" />
                 <span><span className="font-semibold text-slate-900">{yearsOfService}</span> years of service</span>
               </div>
-              {age !== null && (
+              {ageStr && (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
                   <Calendar className="w-4 h-4 text-blue-500" />
-                  <span>Age <span className="font-semibold text-slate-900">{age}</span></span>
+                  <span>Age <span className="font-semibold text-slate-900">{ageStr}</span></span>
+                </div>
+              )}
+              {retirementStr && (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Calendar className="w-4 h-4 text-rose-500" />
+                  <span>Retires <span className="font-semibold text-slate-900">{retirementStr}</span></span>
                 </div>
               )}
               <div className="flex items-center gap-2 text-sm text-slate-500">

@@ -38,6 +38,7 @@ create table if not exists teachers (
 
   -- Employment
   designation text not null,
+  grade text,
   employment_type text not null check (employment_type in ('permanent', 'contract', 'temporary')),
   status text not null default 'active' check (status in ('active', 'on_leave', 'transferred', 'retired')),
   date_joined date not null,

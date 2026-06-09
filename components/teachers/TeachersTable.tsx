@@ -1,16 +1,49 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { Teacher } from '@/types'
+import { Teacher, Subject } from '@/types'
 import Link from 'next/link'
 import {
   Search, ChevronRight, ChevronUp, ChevronDown,
-  LayoutGrid, List, Download, Users, ArrowUpDown, Filter
+  LayoutGrid, List, Download, Users, ArrowUpDown, Filter, Calendar
 } from 'lucide-react'
 
 interface Props {
   teachers: Teacher[]
+  subjects: Subject[]
   canView: boolean
+}
+
+function calculateAgeDetails(dobStr: string, targetDate: Date): { years: number; months: number; days: number } {
+  if (!dobStr) return { years: 0, months: 0, days: 0 }
+  const dob = new Date(dobStr)
+  if (isNaN(dob.getTime())) return { years: 0, months: 0, days: 0 }
+
+  let years = targetDate.getFullYear() - dob.getFullYear()
+  let months = targetDate.getMonth() - dob.getMonth()
+  let days = targetDate.getDate() - dob.getDate()
+
+  if (days < 0) {
+    const prevMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 0)
+    days += prevMonth.getDate()
+    months -= 1
+  }
+
+  if (months < 0) {
+    months += 12
+    years -= 1
+  }
+
+  return { years, months, days }
+}
+
+function getRetirementDate(dobStr: string): string {
+  if (!dobStr) return '—'
+  const dob = new Date(dobStr)
+  if (isNaN(dob.getTime())) return '—'
+  const retirement = new Date(dob)
+  retirement.setFullYear(dob.getFullYear() + 60)
+  return retirement.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: '2-digit' })
 }
 
 type SortKey = 'full_name' | 'designation' | 'employment_type' | 'status' | 'date_joined'
@@ -49,23 +82,64 @@ function avatarColor(name: string) {
 
 const PAGE_SIZE = 15
 
-function exportCsv(teachers: Teacher[]) {
-  const headers = ['Full Name', 'NIC', 'Designation', 'Employment Type', 'Status', 'Date Joined', 'Phone', 'Email']
-  const rows = teachers.map(t => [
-    t.full_name, t.nic, t.designation, t.employment_type, t.status,
-    t.date_joined, t.phone, t.email ?? '',
-  ])
-  const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+function exportCsv(teachers: Teacher[], subjects: Subject[], targetDate: Date) {
+  const headers = [
+    'Name with Initials',
+    'Full Name',
+    'NIC',
+    'Designation',
+    'Grade',
+    'Subjects',
+    'Date of Birth',
+    `Age (Years) as of ${targetDate.toISOString().slice(0, 10)}`,
+    `Age (Months) as of ${targetDate.toISOString().slice(0, 10)}`,
+    `Age (Days) as of ${targetDate.toISOString().slice(0, 10)}`,
+    'Retirement Date',
+    'Employment Type',
+    'Status',
+    'Date Joined',
+    'Phone',
+    'Email',
+    'Address'
+  ]
+  const rows = teachers.map(t => {
+    const age = calculateAgeDetails(t.date_of_birth, targetDate)
+    const mappedSubjects = (t.subject_ids || [])
+      .map(id => subjects.find(s => s.id === id)?.name)
+      .filter(Boolean)
+      .join(', ')
+    const retirementDate = getRetirementDate(t.date_of_birth)
+    return [
+      t.name_with_initials,
+      t.full_name,
+      t.nic,
+      t.designation,
+      t.grade || '—',
+      mappedSubjects || '—',
+      t.date_of_birth,
+      age.years.toString(),
+      age.months.toString(),
+      age.days.toString(),
+      retirementDate,
+      t.employment_type,
+      t.status,
+      t.date_joined,
+      t.phone,
+      t.email ?? '',
+      t.address,
+    ]
+  })
+  const csv = [headers, ...rows].map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(',')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href     = url
-  a.download = `teachers-${new Date().toISOString().slice(0, 10)}.csv`
+  a.download = `teachers-detailed-${new Date().toISOString().slice(0, 10)}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
 
-export default function TeachersTable({ teachers, canView }: Props) {
+export default function TeachersTable({ teachers, subjects, canView }: Props) {
   const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter,   setTypeFilter]   = useState('all')
@@ -74,6 +148,12 @@ export default function TeachersTable({ teachers, canView }: Props) {
   const [viewMode,     setViewMode]     = useState<ViewMode>('table')
   const [page,         setPage]         = useState(1)
   const [filtersExpanded, setFiltersExpanded] = useState(false)
+  const [targetDateStr, setTargetDateStr] = useState<string>(new Date().toISOString().slice(0, 10))
+
+  const targetDate = useMemo(() => {
+    const d = new Date(targetDateStr)
+    return isNaN(d.getTime()) ? new Date() : d
+  }, [targetDateStr])
 
   const toggleSort = useCallback((key: SortKey) => {
     if (sortKey === key) setSortAsc(v => !v)
@@ -201,9 +281,21 @@ export default function TeachersTable({ teachers, canView }: Props) {
               </button>
             </div>
 
+            {/* Target Date Picker */}
+            <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 bg-white h-[42px]">
+              <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <span className="text-xs text-slate-400 whitespace-nowrap">Age as of:</span>
+              <input
+                type="date"
+                value={targetDateStr}
+                onChange={e => setTargetDateStr(e.target.value)}
+                className="text-xs font-semibold text-slate-700 bg-transparent border-0 p-0 focus:ring-0 cursor-pointer w-28"
+              />
+            </div>
+
             <button
               type="button"
-              onClick={() => exportCsv(filtered)}
+              onClick={() => exportCsv(filtered, subjects, targetDate)}
               className="btn-secondary"
               title="Export CSV"
             >
@@ -245,6 +337,18 @@ export default function TeachersTable({ teachers, canView }: Props) {
                   </select>
                 </div>
               </div>
+              <div className="mt-2.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Age as of date</label>
+                <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 bg-white h-[38px]">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <input
+                    type="date"
+                    value={targetDateStr}
+                    onChange={e => setTargetDateStr(e.target.value)}
+                    className="text-xs font-semibold text-slate-700 bg-transparent border-0 p-0 focus:ring-0 cursor-pointer flex-1"
+                  />
+                </div>
+              </div>
 
               <div className="flex items-center gap-3 mt-1 pt-2 border-t border-slate-100">
                 <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
@@ -266,7 +370,7 @@ export default function TeachersTable({ teachers, canView }: Props) {
 
                 <button
                   type="button"
-                  onClick={() => exportCsv(filtered)}
+                  onClick={() => exportCsv(filtered, subjects, targetDate)}
                   className="btn-secondary flex-1 justify-center py-2 text-xs flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -312,16 +416,25 @@ export default function TeachersTable({ teachers, canView }: Props) {
                   <th className="table-head-cell" onClick={() => toggleSort('designation')}>
                     <div className="flex items-center gap-1.5">Designation <SortIcon field="designation" /></div>
                   </th>
-                  <th className="table-head-cell hidden md:table-cell" onClick={() => toggleSort('employment_type')}>
+                  <th className="table-head-cell hidden sm:table-cell">
+                    Grade
+                  </th>
+                  <th className="table-head-cell hidden md:table-cell">
+                    Subjects
+                  </th>
+                  <th className="table-head-cell hidden lg:table-cell">
+                    Age
+                  </th>
+                  <th className="table-head-cell hidden xl:table-cell">
+                    Retirement
+                  </th>
+                  <th className="table-head-cell hidden xl:table-cell" onClick={() => toggleSort('employment_type')}>
                     <div className="flex items-center gap-1.5">Type <SortIcon field="employment_type" /></div>
                   </th>
                   <th className="table-head-cell" onClick={() => toggleSort('status')}>
                     <div className="flex items-center gap-1.5">Status <SortIcon field="status" /></div>
                   </th>
-                  <th className="table-head-cell hidden lg:table-cell" onClick={() => toggleSort('date_joined')}>
-                    <div className="flex items-center gap-1.5">Joined <SortIcon field="date_joined" /></div>
-                  </th>
-                  <th className="bg-slate-50 border-b border-slate-200/80 px-5 py-3.5" />
+                  <th className="table-head-cell hidden lg:table-cell text-right" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -329,6 +442,12 @@ export default function TeachersTable({ teachers, canView }: Props) {
                   const ac = avatarColor(t.full_name)
                   const sc = STATUS_CONFIG[t.status]
                   const tc = TYPE_CONFIG[t.employment_type]
+                  const age = calculateAgeDetails(t.date_of_birth, targetDate)
+                  const mappedSubs = (t.subject_ids || [])
+                    .map(id => subjects.find(s => s.id === id)?.name)
+                    .filter(Boolean)
+                    .join(', ')
+
                   return (
                     <tr key={t.id} className="table-row">
                       <td className="table-cell">
@@ -345,7 +464,19 @@ export default function TeachersTable({ teachers, canView }: Props) {
                       <td className="table-cell">
                         <p className="text-sm text-slate-700">{t.designation}</p>
                       </td>
-                      <td className="table-cell hidden md:table-cell">
+                      <td className="table-cell hidden sm:table-cell">
+                        <span className="text-sm font-medium text-slate-700">{t.grade || '—'}</span>
+                      </td>
+                      <td className="table-cell hidden md:table-cell max-w-[200px] truncate" title={mappedSubs}>
+                        <span className="text-sm text-slate-600">{mappedSubs || '—'}</span>
+                      </td>
+                      <td className="table-cell hidden lg:table-cell text-sm text-slate-700 font-medium">
+                        {t.date_of_birth ? `${age.years}y ${age.months}m ${age.days}d` : '—'}
+                      </td>
+                      <td className="table-cell hidden xl:table-cell text-sm text-slate-500">
+                        {t.date_of_birth ? getRetirementDate(t.date_of_birth) : '—'}
+                      </td>
+                      <td className="table-cell hidden xl:table-cell">
                         <span className={tc.cls}>{tc.label}</span>
                       </td>
                       <td className="table-cell">
@@ -355,9 +486,6 @@ export default function TeachersTable({ teachers, canView }: Props) {
                             <p className="text-xs text-blue-500">→ {t.transferred_to}</p>
                           )}
                         </div>
-                      </td>
-                      <td className="table-cell hidden lg:table-cell text-slate-500">
-                        {new Date(t.date_joined).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: '2-digit' })}
                       </td>
                       <td className="table-cell text-right">
                         <Link
@@ -385,24 +513,63 @@ export default function TeachersTable({ teachers, canView }: Props) {
             const ac = avatarColor(t.full_name)
             const sc = STATUS_CONFIG[t.status]
             const tc = TYPE_CONFIG[t.employment_type]
+            const age = calculateAgeDetails(t.date_of_birth, targetDate)
+            const mappedSubs = (t.subject_ids || [])
+              .map(id => subjects.find(s => s.id === id)?.name)
+              .filter(Boolean)
+              .join(', ')
+
             return (
-              <Link key={t.id} href={`/teachers/${t.id}`} className="card-hover p-5 group">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className={`w-12 h-12 rounded-2xl ${ac.bg} flex items-center justify-center flex-shrink-0`}>
-                    <span className={`text-sm font-bold ${ac.text}`}>{getInitials(t.full_name)}</span>
+              <Link key={t.id} href={`/teachers/${t.id}`} className="card-hover p-5 group flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className={`w-12 h-12 rounded-2xl ${ac.bg} flex items-center justify-center flex-shrink-0`}>
+                      <span className={`text-sm font-bold ${ac.text}`}>{getInitials(t.full_name)}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{t.name_with_initials}</p>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">{t.designation}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{t.name_with_initials}</p>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{t.designation}</p>
+
+                  {/* Enhanced Details */}
+                  <div className="space-y-1.5 mb-4 text-xs text-slate-500">
+                    {t.grade && (
+                      <div className="flex justify-between gap-2">
+                        <span>Grade:</span>
+                        <span className="font-semibold text-slate-700 truncate">{t.grade}</span>
+                      </div>
+                    )}
+                    {mappedSubs && (
+                      <div className="flex justify-between gap-2">
+                        <span>Subjects:</span>
+                        <span className="font-semibold text-slate-700 truncate" title={mappedSubs}>{mappedSubs}</span>
+                      </div>
+                    )}
+                    {t.date_of_birth && (
+                      <>
+                        <div className="flex justify-between gap-2">
+                          <span>Age:</span>
+                          <span className="font-semibold text-slate-700">{age.years}y {age.months}m {age.days}d</span>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <span>Retires:</span>
+                          <span className="font-semibold text-slate-700">{getRetirementDate(t.date_of_birth)}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className={sc.cls}>{sc.label}</span>
-                  <span className={tc.cls}>{tc.label}</span>
-                </div>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                  <p className="text-xs text-slate-400 font-mono">{t.nic}</p>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+
+                <div>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    <span className={sc.cls}>{sc.label}</span>
+                    <span className={tc.cls}>{tc.label}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <p className="text-xs text-slate-400 font-mono">{t.nic}</p>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                  </div>
                 </div>
               </Link>
             )

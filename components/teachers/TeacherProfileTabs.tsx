@@ -131,6 +131,17 @@ export default function TeacherProfileTabs({ teacher: t, history, timetable, can
                   </div>
                 </div>
                 <div className={INFO_ROW}>
+                  <Calendar className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <dt className="text-xs text-slate-400 mb-0.5">Retirement Date</dt>
+                    <dd className="text-sm text-slate-900 font-semibold">
+                      {t.date_of_birth
+                        ? new Date(new Date(t.date_of_birth).setFullYear(new Date(t.date_of_birth).getFullYear() + 60)).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: '2-digit' })
+                        : '—'}
+                    </dd>
+                  </div>
+                </div>
+                <div className={INFO_ROW}>
                   <div className="w-4 h-4 flex items-center justify-center mt-0.5 flex-shrink-0">
                     <span className="text-slate-400 text-xs">♀♂</span>
                   </div>
@@ -150,10 +161,11 @@ export default function TeacherProfileTabs({ teacher: t, history, timetable, can
               <h2 className="form-section-title">
                 <Briefcase className="w-4 h-4 text-slate-400" /> Employment Details
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 {[
                   { label: 'Date Joined', value: new Date(t.date_joined).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: '2-digit' }) },
                   { label: 'Designation', value: t.designation },
+                  { label: 'Grade', value: t.grade || '—' },
                   { label: 'Employment', value: t.employment_type.charAt(0).toUpperCase() + t.employment_type.slice(1) },
                   { label: 'Status', value: t.status === 'on_leave' ? 'On Leave' : t.status.charAt(0).toUpperCase() + t.status.slice(1) },
                 ].map(({ label, value }) => (
@@ -162,6 +174,27 @@ export default function TeacherProfileTabs({ teacher: t, history, timetable, can
                     <p className="text-sm font-semibold text-slate-900">{value}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Assigned Subjects */}
+            <div className="card p-6">
+              <h2 className="form-section-title">
+                <GraduationCap className="w-4 h-4 text-slate-400" /> Assigned Subjects
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {(t.subject_ids || []).length === 0 ? (
+                  <span className="text-sm text-slate-400">No subjects assigned.</span>
+                ) : (
+                  (t.subject_ids || []).map(id => {
+                    const subName = subjects.find(s => s.id === id)?.name || 'Unknown'
+                    return (
+                      <span key={id} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-xl border border-emerald-100/80">
+                        {subName}
+                      </span>
+                    )
+                  })
+                )}
               </div>
             </div>
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { Teacher, EmploymentHistory } from '@/types'
+import { Teacher, EmploymentHistory, Subject } from '@/types'
 import { Loader2, Save, Plus, Trash2, Upload, FileText, ExternalLink, X, CheckCircle2, Briefcase } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/Toast'
@@ -29,6 +29,7 @@ export default function TeacherForm({ teacher, mode }: Props) {
   const [step,      setStep]      = useState(0)
   const [loading,   setLoading]   = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [allSubjects, setAllSubjects] = useState<Subject[]>([])
 
   const [form, setForm] = useState({
     full_name:               teacher?.full_name               || '',
@@ -40,6 +41,7 @@ export default function TeacherForm({ teacher, mode }: Props) {
     email:                   teacher?.email                   || '',
     address:                 teacher?.address                 || '',
     designation:             teacher?.designation             || '',
+    grade:                   teacher?.grade                   || '',
     employment_type:         teacher?.employment_type         || 'permanent',
     status:                  teacher?.status                  || 'active',
     date_joined:             teacher?.date_joined             || new Date().toISOString().slice(0, 10),
@@ -49,6 +51,7 @@ export default function TeacherForm({ teacher, mode }: Props) {
     graduation_year:         teacher?.graduation_year?.toString() || '',
     resume_url:              teacher?.resume_url              || '',
     notes:                   teacher?.notes                   || '',
+    subject_ids:             teacher?.subject_ids             || [] as string[],
   })
 
   const [experiences, setExperiences] = useState<Array<{
@@ -80,6 +83,16 @@ export default function TeacherForm({ teacher, mode }: Props) {
         })
     }
   }, [mode, teacher?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    supabase
+      .from('subjects')
+      .select('*')
+      .order('name', { ascending: true })
+      .then(({ data }) => {
+        if (data) setAllSubjects(data as Subject[])
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm(prev => {
@@ -147,6 +160,7 @@ export default function TeacherForm({ teacher, mode }: Props) {
         resume_url:      resumeUrl,
         graduation_year: form.graduation_year ? parseInt(form.graduation_year) : null,
         email:           form.email || null,
+        grade:           form.grade || null,
       }
 
       let teacherId: string
@@ -335,6 +349,46 @@ export default function TeacherForm({ teacher, mode }: Props) {
               <input required type="date" className={inputCls}
                 value={form.date_joined} onChange={e => update('date_joined', e.target.value)} />
             </div>
+            
+            {/* Grade select field */}
+            <div>
+              <label className={labelCls}>Grade / Class of Service</label>
+              <select
+                className={selectCls}
+                value={form.grade !== '' && !['1', '2 - I', '2 - II', '3 - I', '3 - II'].includes(form.grade) ? 'custom' : form.grade}
+                onChange={e => {
+                  const val = e.target.value
+                  if (val === 'custom') {
+                    update('grade', 'Custom')
+                  } else {
+                    update('grade', val)
+                  }
+                }}
+              >
+                <option value="">Select Grade</option>
+                <option value="1">Class 1</option>
+                <option value="2 - I">Class 2 - Grade I (2 - I)</option>
+                <option value="2 - II">Class 2 - Grade II (2 - II)</option>
+                <option value="3 - I">Class 3 - Grade I (3 - I)</option>
+                <option value="3 - II">Class 3 - Grade II (3 - II)</option>
+                <option value="custom">Other / Custom...</option>
+              </select>
+            </div>
+
+            {form.grade !== '' && !['1', '2 - I', '2 - II', '3 - I', '3 - II'].includes(form.grade) && (
+              <div>
+                <label className={labelCls}>Custom Grade <span className="text-red-500">*</span></label>
+                <input
+                  required
+                  type="text"
+                  className={inputCls}
+                  value={form.grade === 'Custom' ? '' : form.grade}
+                  onChange={e => update('grade', e.target.value)}
+                  placeholder="Enter grade (e.g. 3-I)"
+                />
+              </div>
+            )}
+
             <div>
               <label className={labelCls}>Employment Type <span className="text-red-500">*</span></label>
               <select className={selectCls} value={form.employment_type} onChange={e => update('employment_type', e.target.value as any)}>
@@ -360,6 +414,37 @@ export default function TeacherForm({ teacher, mode }: Props) {
                   placeholder="Name of the school transferred to" />
               </div>
             )}
+
+            {/* Subjects checklist */}
+            <div className="md:col-span-2">
+              <label className={labelCls}>Assigned Subjects</label>
+              {allSubjects.length === 0 ? (
+                <p className="text-xs text-slate-400">Loading subjects...</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-2 p-4 bg-slate-50 border border-slate-200/60 rounded-xl max-h-48 overflow-y-auto">
+                  {allSubjects.map(sub => {
+                    const checked = form.subject_ids.includes(sub.id)
+                    return (
+                      <label key={sub.id} className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900 transition-colors">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                          checked={checked}
+                          onChange={() => {
+                            const nextIds = checked
+                              ? form.subject_ids.filter(id => id !== sub.id)
+                              : [...form.subject_ids, sub.id]
+                            update('subject_ids', nextIds)
+                          }}
+                        />
+                        <span>{sub.name}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
             <div className="md:col-span-2">
               <label className={labelCls}>Notes</label>
               <textarea rows={3} className={inputCls}
