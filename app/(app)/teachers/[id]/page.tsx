@@ -110,9 +110,17 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
     ? getRetirementDate(t.date_of_birth)
     : null
 
-  const yearsOfService = t.date_joined
-    ? Math.floor((Date.now() - new Date(t.date_joined).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
-    : 0
+  const serviceDetails = t.date_joined
+    ? calculateAgeDetails(t.date_joined, new Date())
+    : null
+
+  const serviceStr = serviceDetails
+    ? serviceDetails.years > 0
+      ? `${serviceDetails.years} year${serviceDetails.years !== 1 ? 's' : ''}${serviceDetails.months > 0 ? `, ${serviceDetails.months} month${serviceDetails.months !== 1 ? 's' : ''}` : ''}`
+      : serviceDetails.months > 0
+        ? `${serviceDetails.months} month${serviceDetails.months !== 1 ? 's' : ''}`
+        : `${serviceDetails.days} day${serviceDetails.days !== 1 ? 's' : ''}`
+    : '0 days'
 
   return (
     <div className="page-container max-w-6xl mx-auto animate-fade-in-up">
@@ -135,7 +143,7 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
         </div>
 
         <div className="px-6 pb-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-10">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-10 relative z-10">
             {/* Avatar */}
             <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${av.from} ${av.to}
                             flex items-center justify-center shadow-lg border-4 border-white flex-shrink-0`}>
@@ -171,7 +179,7 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
             <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100">
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Award className="w-4 h-4 text-emerald-500" />
-                <span><span className="font-semibold text-slate-900">{yearsOfService}</span> years of service</span>
+                <span><span className="font-semibold text-slate-900">{serviceStr}</span> of service</span>
               </div>
               {ageStr && (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
